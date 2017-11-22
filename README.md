@@ -10,9 +10,9 @@ Once you've got that, head on over to the Releases tab and download the latest z
 
 From there, make it your own by creating a config.ini file in the format of the existing config_example.ini file with your details.  
 
-When you're all configured, run it in the foreground with start.bat or if you have [AutoHotkey](https://autohotkey.com/) you can compile the included TwitchLiveNotifierHidden.ahk to run it in the background instead!  
+When you're all configured, run it in the foreground with ```start.bat``` or in the background with ```TwitchLiveNotifierHidden.exe``` thanks to the included [AutoHotkey](https://autohotkey.com/) script that comes pre-compiled in all releases. You can recompile it yourself with the included TwitchLiveNotifierHidden.ahk if you run into any issues.  
 
-Once running, the script will keep checking for your stream to go live and post in the Discord channel when it is. 
+Once running, the script will keep checking for your stream to go live and post in the Discord channel when it goes live with the message and description of your choosing, along with the box-art for the current game/activity. 
 
 The program will run once and then stop, and will only allow one execution at a time in case your finger slips and you hit it twice really quick by mistake, which tends to happen a lot personally when using a Stream Deck. ;)
 
