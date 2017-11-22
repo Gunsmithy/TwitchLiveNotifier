@@ -1,4 +1,5 @@
 # Twitch Live Notifier
+[![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=LB2R9THJJW8EL)  
 Python script to notify a Discord server when the streamer goes live, with the current game and box art.  
 
 This was made to partially automate the process of notifying a Discord server that the broadcaster has gone live, while still adding useful information like the stream's title and game that would otherwise have to be done manually.
