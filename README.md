@@ -27,8 +27,6 @@ The included config_example.ini should give you a good idea of what the config.i
 ### Twitch
 #### User
 This is simply the username/handle of the streamer/broadcaster. It can be written in whatever case you would like it to appear in the below Discord message/description placeholders, as it will be converted to lowercase automatically for internal functionality.
-#### Client ID
-This is a unique identifier given to you by Twitch to give the script access to their APIs to check if you're live and see what game you're playing. You can get this by going to [the Twitch API site here](https://dev.twitch.tv/dashboard/apps/create) and creating a new "App." You can name and categorize it however you like, and simply set the OAuth Redirect URI to ```http://localhost``` before pressing Register. It will then provide you with the Client ID to paste into your config.ini file.
 
 ### Discord
 #### Url

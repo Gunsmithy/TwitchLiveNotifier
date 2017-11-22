@@ -26,8 +26,8 @@ import configparser
 import requests
 import zc.lockfile
 
+twitch_client_id = 'r5og8xrcb7c4r0b53tyijq2gvxgryp'
 twitch_user = None
-twitch_client_id = None
 stream_api_url = None
 stream_url = None
 discord_url = None
@@ -36,7 +36,7 @@ discord_message = None
 def config():
     config = configparser.ConfigParser()
     config.read('config.ini')
-
+    
     twitch_config = {}
     try:
         twitch_config = config['Twitch']
@@ -44,7 +44,7 @@ def config():
         print('[Twitch] section not found in config file. Please set values for [Twitch] in config.ini')
         print('Take a look at config_example.ini for how config.ini should look.')
         sys.exit()
-
+    
     global twitch_user
     try:
         twitch_user = twitch_config['User']
@@ -53,20 +53,12 @@ def config():
         print('This is the broadcaster\'s Twitch name, case-insensitive.')
         sys.exit()
     
-    global twitch_client_id
-    try:
-        twitch_client_id = twitch_config['ClientID']
-    except:
-        print('ClientID not found in Twitch section of config file. Please set ClientID under [Twitch] in config.ini')
-        print('This can be retrieved by making an app at https://dev.twitch.tv/dashboard/apps/create')
-        sys.exit()
-
     global stream_api_url
     stream_api_url = "https://api.twitch.tv/kraken/streams/" + twitch_user.lower()
     
     global stream_url
     stream_url = "https://www.twitch.tv/" + twitch_user.lower()
-
+    
     discord_config = {}
     try:
         discord_config = config['Discord']
