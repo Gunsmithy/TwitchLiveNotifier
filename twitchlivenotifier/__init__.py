@@ -32,6 +32,7 @@ stream_api_url = None
 stream_url = None
 discord_url = None
 discord_message = None
+lock = None
 
 def config():
     config = configparser.ConfigParser()
@@ -95,6 +96,7 @@ def config():
 def lock():
     try:
         print("Acquiring lock...")
+        global lock
         lock = zc.lockfile.LockFile('lock.lock')
     except:
         print("Failed to acquire lock, terminating...")
