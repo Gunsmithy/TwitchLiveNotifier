@@ -108,3 +108,6 @@ config.ini
 
 # Compiled AutoHotkey script
 TwitchLiveNotifierHidden.exe
+
+# PyCharm
+.idea
