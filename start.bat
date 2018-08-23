@@ -1,1 +1,1 @@
-start twitchlivenotifier\__init__.py
+python twitchlivenotifier\__init__.py

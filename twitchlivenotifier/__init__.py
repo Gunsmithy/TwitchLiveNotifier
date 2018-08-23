@@ -30,6 +30,7 @@ twitch_client_id = 'r5og8xrcb7c4r0b53tyijq2gvxgryp'
 twitch_user = None
 stream_api_url = None
 stream_url = None
+discord_enable = None
 discord_url = None
 discord_message = None
 lock = None
@@ -71,6 +72,14 @@ def config():
 
     global discord_url
     try:
+        discord_enable = discord_config['Enable']
+    except:
+        print('Enable not found in Discord section of config file. Please set Url under [Discord] in config.ini')
+        print('This can be found by editing a Discord channel, selecting Webhooks, and creating a hook.')
+        sys.exit()
+
+    global discord_message
+    try:
         discord_url = discord_config['Url']
     except:
         print('Url not found in Discord section of config file. Please set Url under [Discord] in config.ini')
@@ -105,32 +114,7 @@ def lock():
         print("Failed to acquire lock, terminating...")
         sys.exit()
 
-
-def main():
-    twitch_json = {}
-    while twitch_json.get('stream', None) is None:
-        twitch_headers = {'Client-ID': twitch_client_id}
-        twitch_request = requests.get(stream_api_url, headers=twitch_headers)
-        twitch_json = twitch_request.json()
-
-        if twitch_json['stream'] is not None:
-            print("Stream is live.")
-
-            stream_title = twitch_json['stream']['channel']['status']
-            stream_game = twitch_json['stream']['channel']['game']
-            stream_logo = twitch_json['stream']['channel']['logo']
-
-            game_search_url = "https://api.twitch.tv/kraken/search/games?query=" + urllib.parse.quote_plus(stream_game)
-            game_headers = {'Client-ID': twitch_client_id, 'Accept': 'application/vnd.twitchtv.v5+json'}
-            game_logo_request = requests.get(game_search_url, headers=game_headers)
-            search_response = game_logo_request.json()
-            if search_response.get('games'):
-                if len(search_response.get('games')) > 0:
-                    game_logo = search_response.get('games')[0]['box']['large']
-                    logo_request = requests.get(game_logo)
-                    if '404' not in logo_request.url:
-                        stream_logo = game_logo
-
+def discord(stream_title, stream_game, stream_logo):
             # Scrub ./ from the boxart URL if present so it works with the Discord API properly
             stream_logo = stream_logo.replace('./', '')
 
@@ -166,6 +150,35 @@ def main():
                 else:
                     print("Failed to call Discord API. Waiting 5 seconds to retry...")
                     time.sleep(5)
+
+def main():
+    twitch_json = {}
+    while twitch_json.get('stream', None) is None:
+        twitch_headers = {'Client-ID': twitch_client_id}
+        twitch_request = requests.get(stream_api_url, headers=twitch_headers)
+        twitch_json = twitch_request.json()
+
+        if twitch_json['stream'] is not None:
+            print("Stream is live.")
+
+            stream_title = twitch_json['stream']['channel']['status']
+            stream_game = twitch_json['stream']['channel']['game']
+            stream_logo = twitch_json['stream']['channel']['logo']
+
+            game_search_url = "https://api.twitch.tv/kraken/search/games?query=" + urllib.parse.quote_plus(stream_game)
+            game_headers = {'Client-ID': twitch_client_id, 'Accept': 'application/vnd.twitchtv.v5+json'}
+            game_logo_request = requests.get(game_search_url, headers=game_headers)
+            search_response = game_logo_request.json()
+            if search_response.get('games'):
+                if len(search_response.get('games')) > 0:
+                    game_logo = search_response.get('games')[0]['box']['large']
+                    logo_request = requests.get(game_logo)
+                    if '404' not in logo_request.url:
+                        stream_logo = game_logo
+
+            if "Enable" == discord_enable:
+                discord(stream_title, stream_game, stream_logo)
+
         else:
             print("Stream is not live. Waiting 5 seconds to retry...")
             time.sleep(5)
