@@ -14,13 +14,11 @@ Python script to notify a Discord server when the streamer goes live, with the c
 __title__ = 'twitchlivenotifier'
 __author__ = 'Dylan Kauling'
 __license__ = 'GPLv3'
-__copyright__ = 'Copyright 2017-2018 Dylan Kauling'
-__version__ = '0.1'
+__copyright__ = 'Copyright 2017-2019 Dylan Kauling'
+__version__ = '0.2'
 
-import json
 import time
 import sys
-import urllib.parse
 import configparser
 
 import requests
@@ -39,10 +37,9 @@ def config():
     config_file = configparser.ConfigParser()
     config_file.read('config.ini')
 
-    twitch_config = {}
     try:
         twitch_config = config_file['Twitch']
-    except:
+    except KeyError:
         print('[Twitch] section not found in config file. Please set values for [Twitch] in config.ini')
         print('Take a look at config_example.ini for how config.ini should look.')
         sys.exit()
@@ -50,21 +47,30 @@ def config():
     global twitch_user
     try:
         twitch_user = twitch_config['User']
-    except:
+    except KeyError:
         print('User not found in Twitch section of config file. Please set User under [Twitch] in config.ini')
         print('This is the broadcaster\'s Twitch name, case-insensitive.')
         sys.exit()
 
+    global image_priority
+    try:
+        image_priority = twitch_config['ImagePriority']
+    except KeyError:
+        print('ImagePriority not found in Twitch section of config file. '
+              'Please set ImagePriority under [Twitch] in config.ini')
+        print('This is what image should be attempted to be used first for the message, Game or Preview.')
+        print('If the game logo or stream preview cannot be loaded, it will fall back to the user logo.')
+        sys.exit()
+
     global stream_api_url
-    stream_api_url = "https://api.twitch.tv/kraken/streams/" + twitch_user.lower()
+    stream_api_url = "https://api.twitch.tv/helix/streams"
 
     global stream_url
     stream_url = "https://www.twitch.tv/" + twitch_user.lower()
 
-    discord_config = {}
     try:
         discord_config = config_file['Discord']
-    except:
+    except KeyError:
         print('[Discord] section not found in config file. Please set values for [Discord] in config.ini')
         print('Take a look at config_example.ini for how config.ini should look.')
         sys.exit()
@@ -72,7 +78,7 @@ def config():
     global discord_url
     try:
         discord_url = discord_config['Url']
-    except:
+    except KeyError:
         print('Url not found in Discord section of config file. Please set Url under [Discord] in config.ini')
         print('This can be found by editing a Discord channel, selecting Webhooks, and creating a hook.')
         sys.exit()
@@ -80,7 +86,7 @@ def config():
     global discord_message
     try:
         discord_message = discord_config['Message']
-    except:
+    except KeyError:
         print('Message not found in Discord section of config file. Please set Message under [Discord] in config.ini')
         print('This can be set to whatever you want the bot to say, with {{Name}} and {{Game}} as placeholders.')
         sys.exit()
@@ -88,7 +94,7 @@ def config():
     global discord_description
     try:
         discord_description = discord_config['Description']
-    except:
+    except KeyError:
         print('Description not found in Discord section of config file. Please set Description under [Discord]' +
               ' in config.ini')
         print('This can be set to whatever you want to appear under the stream title, with {{Name}} and {{Game}}' +
@@ -96,7 +102,7 @@ def config():
         sys.exit()
 
 
-def lock():
+def get_lock():
     try:
         print("Acquiring lock...")
         global lock
@@ -107,32 +113,62 @@ def lock():
 
 
 def main():
-    twitch_json = {}
-    while twitch_json.get('stream', None) is None:
+    twitch_json = {'data': []}
+    while len(twitch_json['data']) == 0:
         twitch_headers = {'Client-ID': twitch_client_id}
-        twitch_request = requests.get(stream_api_url, headers=twitch_headers)
+        twitch_params = {'user_login': twitch_user.lower()}
+        twitch_request = requests.get(stream_api_url, headers=twitch_headers, params=twitch_params)
         twitch_json = twitch_request.json()
 
-        if twitch_json['stream'] is not None:
+        if len(twitch_json['data']) == 1:
             print("Stream is live.")
 
-            stream_title = twitch_json['stream']['channel']['status']
-            stream_game = twitch_json['stream']['channel']['game']
-            stream_logo = twitch_json['stream']['channel']['logo']
+            stream_json = twitch_json['data'][0]
+            stream_title = stream_json['title']
+            stream_game_id = stream_json['game_id']
+            stream_preview_temp = stream_json['thumbnail_url']
+            stream_preview_temp = stream_preview_temp.replace('{width}', '1280')
+            stream_preview_temp = stream_preview_temp.replace('{height}', '720')
+            preview_request = requests.get(stream_preview_temp)
+            if '404' not in preview_request.url:
+                stream_preview = stream_preview_temp
+            else:
+                stream_preview = None
 
-            game_search_url = "https://api.twitch.tv/kraken/search/games?query=" + urllib.parse.quote_plus(stream_game)
+            game_search_url = "https://api.twitch.tv/helix/games"
             game_headers = {'Client-ID': twitch_client_id, 'Accept': 'application/vnd.twitchtv.v5+json'}
-            game_logo_request = requests.get(game_search_url, headers=game_headers)
-            search_response = game_logo_request.json()
-            if search_response.get('games'):
-                if len(search_response.get('games')) > 0:
-                    game_logo = search_response.get('games')[0]['box']['large']
-                    logo_request = requests.get(game_logo)
-                    if '404' not in logo_request.url:
-                        stream_logo = game_logo
+            game_params = {'id': stream_game_id}
+            game_request = requests.get(game_search_url, headers=game_headers, params=game_params)
+            search_response = game_request.json()
 
-            # Scrub ./ from the boxart URL if present so it works with the Discord API properly
-            stream_logo = stream_logo.replace('./', '')
+            stream_game = "something"
+            game_logo = None
+            if len(search_response['data']) > 0:
+                game_data = search_response['data'][0]
+                stream_game = game_data['name']
+                game_logo_temp = game_data['box_art_url']
+                game_logo_temp = game_logo_temp.replace('{width}', '340')
+                game_logo_temp = game_logo_temp.replace('{height}', '452')
+                logo_request = requests.get(game_logo_temp)
+                if '404' not in logo_request.url:
+                    # Scrub ./ from the boxart URL if present so it works with the Discord API properly
+                    game_logo = game_logo_temp.replace('./', '')
+
+            user_search_url = "https://api.twitch.tv/helix/users"
+            user_headers = {'Client-ID': twitch_client_id, 'Accept': 'application/vnd.twitchtv.v5+json'}
+            user_params = {'login': twitch_user.lower()}
+            user_request = requests.get(user_search_url, headers=user_headers, params=user_params)
+            user_response = user_request.json()
+
+            user_logo = None
+            print(str(user_response))
+            if len(user_response['data']) == 1:
+                user_data = user_response['data'][0]
+                user_logo_temp = user_data['profile_image_url']
+                logo_request = requests.get(user_logo_temp)
+                if '404' not in logo_request.url:
+                    # Scrub ./ from the boxart URL if present so it works with the Discord API properly
+                    user_logo = user_logo_temp.replace('./', '')
 
             global discord_description
             discord_description = discord_description.replace('{{Name}}', twitch_user)
@@ -141,6 +177,23 @@ def main():
             discord_message = discord_message.replace('{{Name}}', twitch_user)
             discord_message = discord_message.replace('{{Game}}', stream_game)
 
+            if image_priority == "Game":
+                if game_logo:
+                    stream_logo = game_logo
+                else:
+                    if stream_preview:
+                        stream_logo = stream_preview
+                    else:
+                        stream_logo = user_logo
+            else:
+                if stream_preview:
+                    stream_logo = stream_preview
+                else:
+                    if game_logo:
+                        stream_logo = game_logo
+                    else:
+                        stream_logo = user_logo
+
             discord_payload = {
                 "content": discord_message,
                 "embeds": [
@@ -148,7 +201,7 @@ def main():
                         "title": stream_title,
                         "url": stream_url,
                         "description": discord_description,
-                        "thumbnail": {
+                        "image": {
                             "url": stream_logo
                         }
                      }
@@ -173,5 +226,5 @@ def main():
 
 if __name__ == "__main__":
     config()
-    lock()
+    get_lock()
     main()

@@ -1,6 +1,7 @@
 import twitchlivenotifier
 
+
 def main():
     twitchlivenotifier.config()
-    twitchlivenotifier.lock()
+    twitchlivenotifier.get_lock()
     twitchlivenotifier.main()

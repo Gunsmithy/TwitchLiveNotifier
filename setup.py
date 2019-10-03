@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='twitchlivenotifier',
-      version='0.1',
+      version='0.2',
       description='Python script to notify a Discord server when the streamer goes live, with the current game and box art.',
       url='https://github.com/Gunsmithy/TwitchLiveNotifier',
       author='Dylan Kauling',
