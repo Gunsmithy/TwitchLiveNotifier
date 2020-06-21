@@ -6,7 +6,7 @@ Twitch Live Notifier
 
 Python script to notify a Discord server when the streamer goes live, with the current game and box art.
 
-:copyright: (c) 2017-2018 Dylan Kauling
+:copyright: (c) 2017-2020 Dylan Kauling
 :license: GPLv3, see LICENSE for more details.
 
 """
@@ -14,8 +14,8 @@ Python script to notify a Discord server when the streamer goes live, with the c
 __title__ = 'twitchlivenotifier'
 __author__ = 'Dylan Kauling'
 __license__ = 'GPLv3'
-__copyright__ = 'Copyright 2017-2019 Dylan Kauling'
-__version__ = '0.2'
+__copyright__ = 'Copyright 2017-2020 Dylan Kauling'
+__version__ = '0.3'
 
 import time
 import sys
@@ -24,12 +24,16 @@ import configparser
 import requests
 import zc.lockfile
 
-twitch_client_id = 'r5og8xrcb7c4r0b53tyijq2gvxgryp'
-twitch_user = None
-stream_api_url = None
-stream_url = None
-discord_url = None
-discord_message = None
+twitch_client_id = ''
+twitch_secret_key = ''
+twitch_app_token_json = {}
+twitch_user = ''
+image_priority = ''
+stream_api_url = ''
+stream_url = ''
+discord_url = ''
+discord_message = ''
+discord_description = ''
 lock = None
 
 
@@ -60,6 +64,25 @@ def config():
               'Please set ImagePriority under [Twitch] in config.ini')
         print('This is what image should be attempted to be used first for the message, Game or Preview.')
         print('If the game logo or stream preview cannot be loaded, it will fall back to the user logo.')
+        sys.exit()
+
+    global twitch_client_id
+    try:
+        twitch_client_id = twitch_config['ClientId']
+    except KeyError:
+        print('ClientId not found in Twitch section of config file. Please set ClientId under [Twitch] in config.ini')
+        print('This is the Client ID you receive when registering an application as a Twitch developer.')
+        print('Please check the README for more instructions.')
+        sys.exit()
+
+    global twitch_secret_key
+    try:
+        twitch_secret_key = twitch_config['ClientSecret']
+    except KeyError:
+        print('ClientSecret not found in Twitch section of config file. Please set ClientSecret under [Twitch] in '
+              'config.ini')
+        print('This is the Client Secret you receive when registering an application as a Twitch developer.')
+        print('Please check the README for more instructions.')
         sys.exit()
 
     global stream_api_url
@@ -112,13 +135,34 @@ def get_lock():
         sys.exit()
 
 
+def authorize():
+    token_params = {
+        'client_id': twitch_client_id,
+        'client_secret': twitch_secret_key,
+        'grant_type': 'client_credentials',
+    }
+    app_token_request = requests.post('https://id.twitch.tv/oauth2/token', params=token_params)
+    global twitch_app_token_json
+    twitch_app_token_json = app_token_request.json()
+
+
 def main():
     twitch_json = {'data': []}
     while len(twitch_json['data']) == 0:
-        twitch_headers = {'Client-ID': twitch_client_id}
+        twitch_headers = {
+            'Client-ID': twitch_client_id,
+            'Authorization': 'Bearer ' + twitch_app_token_json['access_token'],
+        }
         twitch_params = {'user_login': twitch_user.lower()}
-        twitch_request = requests.get(stream_api_url, headers=twitch_headers, params=twitch_params)
-        twitch_json = twitch_request.json()
+        request_status = 401
+        while request_status == 401:
+            twitch_request = requests.get(stream_api_url, headers=twitch_headers, params=twitch_params)
+            request_status = twitch_request.status_code
+            if request_status == 401:
+                authorize()
+                twitch_headers['Authorization'] = 'Bearer ' + twitch_app_token_json['access_token']
+                continue
+            twitch_json = twitch_request.json()
 
         if len(twitch_json['data']) == 1:
             print("Stream is live.")
@@ -136,10 +180,17 @@ def main():
                 stream_preview = None
 
             game_search_url = "https://api.twitch.tv/helix/games"
-            game_headers = {'Client-ID': twitch_client_id, 'Accept': 'application/vnd.twitchtv.v5+json'}
             game_params = {'id': stream_game_id}
-            game_request = requests.get(game_search_url, headers=game_headers, params=game_params)
-            search_response = game_request.json()
+            search_response = {}
+            request_status = 401
+            while request_status == 401:
+                game_request = requests.get(game_search_url, headers=twitch_headers, params=game_params)
+                request_status = game_request.status_code
+                if request_status == 401:
+                    authorize()
+                    twitch_headers['Authorization'] = 'Bearer ' + twitch_app_token_json['access_token']
+                    continue
+                search_response = game_request.json()
 
             stream_game = "something"
             game_logo = None
@@ -155,10 +206,17 @@ def main():
                     game_logo = game_logo_temp.replace('./', '')
 
             user_search_url = "https://api.twitch.tv/helix/users"
-            user_headers = {'Client-ID': twitch_client_id, 'Accept': 'application/vnd.twitchtv.v5+json'}
             user_params = {'login': twitch_user.lower()}
-            user_request = requests.get(user_search_url, headers=user_headers, params=user_params)
-            user_response = user_request.json()
+            user_response = {}
+            request_status = 401
+            while request_status == 401:
+                user_request = requests.get(user_search_url, headers=twitch_headers, params=user_params)
+                request_status = user_request.status_code
+                if request_status == 401:
+                    authorize()
+                    twitch_headers['Authorization'] = 'Bearer ' + twitch_app_token_json['access_token']
+                    continue
+                user_response = user_request.json()
 
             user_logo = None
             print(str(user_response))
@@ -227,4 +285,5 @@ def main():
 if __name__ == "__main__":
     config()
     get_lock()
+    authorize()
     main()

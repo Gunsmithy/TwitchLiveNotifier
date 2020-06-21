@@ -31,9 +31,19 @@ The included config_example.ini should give you a good idea of what the config.i
 
 ### Twitch
 #### User
-This is simply the username/handle of the streamer/broadcaster. It can be written in whatever case you would like it to appear in the below Discord message/description placeholders, as it will be converted to lowercase automatically for internal functionality.
+This is simply the username/handle of the streamer/broadcaster.  
+It can be written in whatever case you would like it to appear in the below Discord message/description placeholders, as it will be converted to lowercase automatically for internal functionality.
 #### ImagePriority
-This is what image should be attempted to be used first for the message, Game or Preview. If the game logo or stream preview cannot be loaded, it will fall back to the user logo.
+This is what image should be attempted to be used first for the message, Game or Preview.  
+If the game logo or stream preview cannot be loaded, it will fall back to the user logo.
+#### ClientId
+This is the Client ID you can get from the [Twitch Developers console.](https://dev.twitch.tv/login)
+#### ClientSecret
+This is the Client Secret you can get from the [Twitch Developers console.](https://dev.twitch.tv/login)
+
+If you do not have the above ID and Secret, go to the [Twitch Developers console](https://dev.twitch.tv/login), log in, and register an application.  
+You can provide anything for the name and redirect URL, select any category, and upon creation you will get the ID and secret.
+![Example Registration](https://i.imgur.com/ZKqJID9.png)
 
 ### Discord
 #### Url
