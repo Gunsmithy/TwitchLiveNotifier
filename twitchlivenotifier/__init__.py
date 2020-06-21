@@ -17,12 +17,16 @@ __license__ = 'GPLv3'
 __copyright__ = 'Copyright 2017-2019 Dylan Kauling'
 __version__ = '0.2'
 
-import time
-import sys
 import configparser
+import os
+import sys
+import time
 
+from flask import Flask, request, render_template, send_from_directory
 import requests
 import zc.lockfile
+
+app = Flask(__name__)
 
 twitch_client_id = 'r5og8xrcb7c4r0b53tyijq2gvxgryp'
 twitch_user = None
@@ -31,6 +35,26 @@ stream_url = None
 discord_url = None
 discord_message = None
 lock = None
+
+
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory(os.path.join(app.root_path, 'static'),
+                               'favicon.ico', mimetype='image/vnd.microsoft.icon')
+
+
+@app.route('/token', methods=['GET'])
+def request_oauth_token():
+    return render_template('token.html')
+
+
+@app.route('/token', methods=['POST'])
+def get_oauth_token():
+    token = request.form['access_token']
+    print(f'Got the token: {token}')
+    # func = request.environ.get('werkzeug.server.shutdown')
+    # func()
+    return 'Token get!'
 
 
 def config():
@@ -227,4 +251,5 @@ def main():
 if __name__ == "__main__":
     config()
     get_lock()
-    main()
+    # main()
+    app.run()
